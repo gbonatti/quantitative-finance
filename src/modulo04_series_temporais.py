@@ -155,39 +155,51 @@ def grafico_decomposicao(df):
     print("   ✔ graficos/m04_decomposicao.png")
 
 
+def _plot_acf_manual(ax, valores, nlags, cor, titulo):
+    """Plota ACF/PACF manualmente com barras estilizadas."""
+    ax.set_facecolor(COLORS['surface'])
+    n = len(valores)
+    conf = 1.96 / np.sqrt(n)
+
+    lags_range = range(len(valores[:nlags+1]))
+    ax.bar(lags_range, valores[:nlags+1], width=0.3, color=cor, alpha=0.8, edgecolor='none')
+    ax.axhline(0, color=COLORS['dim'], linewidth=0.5)
+    ax.axhline(conf, color=COLORS['red'], linestyle='--', alpha=0.6, linewidth=1)
+    ax.axhline(-conf, color=COLORS['red'], linestyle='--', alpha=0.6, linewidth=1)
+    ax.fill_between(lags_range, -conf, conf, alpha=0.05, color=COLORS['red'])
+    ax.set_title(titulo, fontsize=11, color=cor)
+    ax.set_ylim(-0.15, 0.15) if abs(valores[1:nlags+1]).max() < 0.15 else None
+    ax.tick_params(colors=COLORS['dim'])
+
+
 def grafico_acf_pacf(retornos):
     """ACF e PACF dos retornos e retornos ao quadrado."""
+    nlags = 40
+
+    acf_ret = acf(retornos, nlags=nlags)
+    pacf_ret = pacf(retornos, nlags=nlags)
+    acf_ret2 = acf(retornos ** 2, nlags=nlags)
+    pacf_ret2 = pacf(retornos ** 2, nlags=nlags)
+
     fig, axes = plt.subplots(2, 2, figsize=(16, 10))
     fig.patch.set_facecolor(COLORS['bg'])
     fig.suptitle('ACF & PACF · RETORNOS E RETORNOS²',
                  fontsize=14, color=COLORS['text'], fontweight='bold', y=1.02)
 
-    titulos = ['ACF — Retornos', 'PACF — Retornos',
-               'ACF — Retornos²', 'PACF — Retornos²']
-    dados = [retornos, retornos, retornos ** 2, retornos ** 2]
-    funcs = [plot_acf, plot_pacf, plot_acf, plot_pacf]
-    cores = [COLORS['green'], COLORS['green'], COLORS['amber'], COLORS['amber']]
+    _plot_acf_manual(axes[0][0], acf_ret, nlags, COLORS['green'], 'ACF — Retornos')
+    _plot_acf_manual(axes[0][1], pacf_ret, nlags, COLORS['green'], 'PACF — Retornos')
+    _plot_acf_manual(axes[1][0], acf_ret2, nlags, COLORS['amber'], 'ACF — Retornos²')
+    _plot_acf_manual(axes[1][1], pacf_ret2, nlags, COLORS['amber'], 'PACF — Retornos²')
 
-    for idx, (ax, titulo, serie, func, cor) in enumerate(
-            zip(axes.flat, titulos, dados, funcs, cores)):
-        ax.set_facecolor(COLORS['surface'])
-        func(serie, lags=40, ax=ax, color=cor, alpha=0.8)
-        ax.set_title(titulo, fontsize=11, color=cor)
-        ax.tick_params(colors=COLORS['dim'])
-        # Estilizar barras
-        for item in ax.get_children():
-            if hasattr(item, 'set_color') and hasattr(item, 'set_linewidth'):
-                try:
-                    item.set_color(cor)
-                except Exception:
-                    pass
+    # Ajustar ylim dos retornos² para ver a persistência
+    for ax in axes[1]:
+        ax.set_ylim(-0.1, max(0.3, acf_ret2[1:].max() * 1.2))
 
     plt.tight_layout()
     plt.savefig('../graficos/m04_acf_pacf.png', **SAVE)
     plt.close()
     print("   ✔ graficos/m04_acf_pacf.png")
 
-    # Info sobre ACF de retornos² (indica efeitos ARCH)
     print("\n   💡 ACF de retornos² significativa → indica volatility clustering (efeito ARCH)")
 
 

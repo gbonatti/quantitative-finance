@@ -11,7 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import adfuller
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.stattools import acf as calc_acf
 from statsmodels.stats.diagnostic import acorr_ljungbox
 import warnings
 warnings.filterwarnings('ignore')
@@ -94,13 +94,27 @@ def ajustar_e_prever(serie, ordem=(2, 1, 1), n_forecast=30):
     """Ajusta ARIMA e faz previsão."""
     print(f"\n📈 Ajustando ARIMA{ordem} e prevendo {n_forecast} passos...")
 
-    model = ARIMA(serie, order=ordem)
+    # Garantir que a série tem frequência definida para previsão correta
+    serie_freq = serie.copy()
+    if serie_freq.index.freq is None:
+        serie_freq = serie_freq.asfreq('B')  # Business days
+        serie_freq = serie_freq.ffill()
+
+    model = ARIMA(serie_freq, order=ordem)
     result = model.fit()
 
     # Previsão
     forecast_result = result.get_forecast(steps=n_forecast)
     forecast = forecast_result.predicted_mean
     conf_int = forecast_result.conf_int()
+
+    # Garantir que o índice da previsão são datas válidas
+    if not isinstance(forecast.index, pd.DatetimeIndex):
+        last_date = serie.index[-1]
+        future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1),
+                                       periods=n_forecast)
+        forecast.index = future_dates
+        conf_int.index = future_dates
 
     # Resíduos
     residuos = result.resid
@@ -179,10 +193,17 @@ def grafico_diagnostico_residuos(residuos, ordem):
     ax2.legend(fontsize=9)
     ax2.tick_params(colors=COLORS['dim'])
 
-    # 3. ACF dos resíduos
+    # 3. ACF dos resíduos (manual para evitar bug visual do plot_acf)
     ax3 = axes[1][0]
     ax3.set_facecolor(COLORS['surface'])
-    plot_acf(residuos, lags=30, ax=ax3, color=COLORS['amber'])
+    nlags = 30
+    acf_vals = calc_acf(residuos, nlags=nlags)
+    conf = 1.96 / np.sqrt(len(residuos))
+    ax3.bar(range(nlags + 1), acf_vals[:nlags + 1], width=0.3,
+            color=COLORS['amber'], alpha=0.8, edgecolor='none')
+    ax3.axhline(0, color=COLORS['dim'], linewidth=0.5)
+    ax3.axhline(conf, color=COLORS['red'], linestyle='--', alpha=0.6)
+    ax3.axhline(-conf, color=COLORS['red'], linestyle='--', alpha=0.6)
     ax3.set_title('ACF dos Resíduos', fontsize=11, color=COLORS['amber'])
     ax3.tick_params(colors=COLORS['dim'])
 
@@ -204,23 +225,35 @@ def grafico_diagnostico_residuos(residuos, ordem):
 
 
 def grafico_comparacao_aic(df_res):
-    """Comparação visual de AIC/BIC entre modelos."""
+    """Comparação visual de AIC/BIC entre modelos (delta relativo ao melhor)."""
     fig, ax = plt.subplots(figsize=(14, 6))
     fig.patch.set_facecolor(COLORS['bg'])
     ax.set_facecolor(COLORS['surface'])
 
-    df_plot = df_res.head(8).sort_values('AIC')
+    df_plot = df_res.head(8).sort_values('AIC').copy()
     x = np.arange(len(df_plot))
     width = 0.35
 
-    ax.bar(x - width/2, df_plot['AIC'], width, color=COLORS['green'],
-           alpha=0.8, label='AIC')
-    ax.bar(x + width/2, df_plot['BIC'], width, color=COLORS['blue'],
-           alpha=0.8, label='BIC')
+    # Usar delta (diferença em relação ao melhor) para visualização clara
+    aic_min = df_plot['AIC'].min()
+    bic_min = df_plot['BIC'].min()
+    delta_aic = df_plot['AIC'] - aic_min
+    delta_bic = df_plot['BIC'] - bic_min
+
+    ax.bar(x - width/2, delta_aic, width, color=COLORS['green'],
+           alpha=0.8, label=f'ΔAIC (ref: {aic_min:,.0f})')
+    ax.bar(x + width/2, delta_bic, width, color=COLORS['blue'],
+           alpha=0.8, label=f'ΔBIC (ref: {bic_min:,.0f})')
+
+    # Adicionar valores absolutos sobre as barras
+    for i, (a, b) in enumerate(zip(df_plot['AIC'], df_plot['BIC'])):
+        max_delta = max(delta_aic.iloc[i], delta_bic.iloc[i])
+        ax.text(i, max_delta + 0.5, f'{a:,.0f}', ha='center', va='bottom',
+                fontsize=7, color=COLORS['dim'])
 
     ax.set_xticks(x)
     ax.set_xticklabels(df_plot['Ordem'], color=COLORS['text'], rotation=45)
-    ax.set_ylabel('Critério de Informação', color=COLORS['dim'])
+    ax.set_ylabel('Δ Critério de Informação (menor = melhor)', color=COLORS['dim'])
     ax.set_title('COMPARAÇÃO AIC / BIC ENTRE MODELOS',
                  fontsize=14, color=COLORS['text'], fontweight='bold', pad=15)
     ax.legend(fontsize=10)
