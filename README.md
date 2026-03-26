@@ -41,10 +41,15 @@ quantitative-finance/
 │   ├── modulo12_derivativos_opcoes.py
 │   └── dashboard_interativo.py
 │
-├── data/                          # Dados gerados (CSV)
-│   ├── precos_acoes_br.csv
-│   ├── estatisticas_retornos.csv
-│   ├── matriz_correlacao.csv
+├── data/                          # Datasets reais (CSV via yfinance)
+│   ├── precos_fechamento_2anos.csv   # Fechamento de 11 ativos (2 anos)
+│   ├── volume_2anos.csv              # Volume negociado (2 anos)
+│   ├── retornos_log_2anos.csv        # Log-retornos diários
+│   ├── ibovespa_ohlcv_3anos.csv      # OHLCV completo do Ibovespa (3 anos)
+│   ├── petr4_ohlcv_3anos.csv         # OHLCV completo da PETR4 (3 anos)
+│   ├── precos_acoes_br.csv           # Preços gerados pelo módulo 01
+│   ├── estatisticas_retornos.csv     # Estatísticas geradas pelo módulo 02
+│   ├── matriz_correlacao.csv         # Correlação gerada pelo módulo 02
 │   └── ...
 │
 └── graficos/                      # Gráficos gerados (PNG)
@@ -149,8 +154,22 @@ Todos os módulos usam **dados reais** do mercado brasileiro via `yfinance`:
 | RENT3 | Localiza | Locação |
 | BBAS3 | Banco do Brasil | Bancos |
 | SUZB3 | Suzano | Papel & Celulose |
-| JBSS3 | JBS | Alimentos |
+| GGBR4 | Gerdau | Siderurgia |
 | ^BVSP | IBOVESPA | Índice |
+
+### Datasets incluídos (`data/`)
+
+O repositório já inclui datasets prontos para uso, baixados via `yfinance`:
+
+| Arquivo | Descrição | Período |
+|---------|-----------|---------|
+| `precos_fechamento_2anos.csv` | Preços de fechamento diários de 11 ativos | 2 anos |
+| `volume_2anos.csv` | Volume negociado diário dos 11 ativos | 2 anos |
+| `retornos_log_2anos.csv` | Log-retornos diários calculados | 2 anos |
+| `ibovespa_ohlcv_3anos.csv` | OHLCV completo do Ibovespa (Open, High, Low, Close, Volume) | 3 anos |
+| `petr4_ohlcv_3anos.csv` | OHLCV completo da Petrobras | 3 anos |
+
+> **Nota:** Os módulos também baixam dados em tempo real ao serem executados. Os CSVs acima servem como referência e para uso offline.
 
 ---
 
