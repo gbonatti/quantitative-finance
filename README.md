@@ -211,9 +211,9 @@ Cada módulo gera múltiplos gráficos com tema escuro profissional:
 
 ---
 
+### Gilberto Ricardo Bonatti - Especialista Modelagem Numérica ###
 <div align="center">
 
 *Desenvolvido como material educacional com ajuda do Claude para meu estudo*
-### Gilberto Ricardo Bonatti - Especialista Modelagem Numérica ###
 
 </div>
